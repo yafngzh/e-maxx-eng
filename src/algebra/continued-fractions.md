@@ -679,12 +679,12 @@ One can further prove (and it was first done by Lagrange) that for arbitrary qua
         # compute the continued fraction of sqrt(n)
         def sqrt(n):
             n0 = math.floor(math.sqrt(n))
-            x, y, z = 0, 1, 1
+            x, y, z = 1, 0, 1
             a = []
             def step(x, y, z):
                 a.append((x * n0 + y) // z)
                 t = y - a[-1]*z
-                x, y, z = z*t, -z*y, t**2 - n*x**2
+                x, y, z = -z*x, z*t, t**2 - n*x**2
                 g = math.gcd(x, math.gcd(y, z))
                 return x // g, y // g, z // g
 

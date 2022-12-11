@@ -97,6 +97,7 @@
         - [Counting labeled graphs](combinatorics/counting_labeled_graphs.md)
 - Numerical Methods
     - Search
+        - [Binary Search](num_methods/binary_search.md)
         - [Ternary Search](num_methods/ternary_search.md)
         - [Newton's method for finding roots](num_methods/roots_newton.md)
     - Integration
@@ -191,6 +192,7 @@
         - [Longest increasing subsequence](sequences/longest_increasing_subsequence.md)
         - [Search the subsegment with the maximum/minimum sum](others/maximum_average_segment.md)
         - [K-th order statistic in O(N)](sequences/k-th.md)
+        - [MEX task (Minimal Excluded element in an array)](sequences/mex.md)
     - Game Theory
         - [Games on arbitrary graphs](game_theory/games_on_graphs.md)
         - [Sprague-Grundy theorem. Nim](game_theory/sprague-grundy-nim.md)

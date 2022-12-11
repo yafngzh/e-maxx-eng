@@ -21,7 +21,7 @@ E.g. $13 = (1101)_2 = 8 + 4 + 1$.
 For a number $x$ there can be at most $\lceil \log_2 x \rceil$ summands.
 
 By the same reasoning any interval can be uniquely represented as a union of intervals with lengths that are decreasing powers of two.
-E.g. $[2, 14] = [2, 9] \cup [10, 13] \cup [14, 14]$, where the complete interval has length 13, and the individual intervals have the lengths 8, 4 and 1 respectably.
+E.g. $[2, 14] = [2, 9] \cup [10, 13] \cup [14, 14]$, where the complete interval has length 13, and the individual intervals have the lengths 8, 4 and 1 respectively.
 And also here the union consists of at most $\lceil \log_2(\text{length of interval}) \rceil$ many intervals.
 
 The main idea behind Sparse Tables is to precompute all answers for range queries with power of two length.
@@ -30,24 +30,25 @@ Afterwards a different range query can be answered by splitting the range into r
 ## Precomputation
 
 We will use a 2-dimensional array for storing the answers to the precomputed queries.
-$\text{st}[i][j]$ will store the answer for the range $[i, i + 2^j - 1]$ of length $2^j$.
-The size of the 2-dimensional array will be $\text{MAXN} \times (K + 1)$, where $\text{MAXN}$ is the biggest possible array length.
+$\text{st}[i][j]$ will store the answer for the range $[j, j + 2^i - 1]$ of length $2^i$.
+The size of the 2-dimensional array will be $(K + 1) \times \text{MAXN}$, where $\text{MAXN}$ is the biggest possible array length.
 $\text{K}$ has to satisfy $\text{K} \ge \lfloor \log_2 \text{MAXN} \rfloor$, because $2^{\lfloor \log_2 \text{MAXN} \rfloor}$ is the biggest power of two range, that we have to support.
 For arrays with reasonable length ($\le 10^7$ elements), $K = 25$ is a good value.
 
+The $\text{MAXN}$ dimension is second to allow (cache friendly) consecutive memory accesses.
+
 ```{.cpp file=sparsetable_definition}
-int st[MAXN][K + 1];
+int st[K + 1][MAXN];
 ```
 
-Because the range $[i, i + 2^j - 1]$ of length $2^j$ splits nicely into the ranges $[i, i + 2^{j - 1} - 1]$ and $[i + 2^{j - 1}, i + 2^j - 1]$, both of length $2^{j - 1}$, we can generate the table efficiently using dynamic programming:
+Because the range $[j, j + 2^i - 1]$ of length $2^i$ splits nicely into the ranges $[j, j + 2^{i - 1} - 1]$ and $[j + 2^{i - 1}, j + 2^i - 1]$, both of length $2^{i - 1}$, we can generate the table efficiently using dynamic programming:
 
 ```{.cpp file=sparsetable_generation}
-for (int i = 0; i < N; i++)
-    st[i][0] = f(array[i]);
+std::copy(array.begin(), array.end(), st[0]);
 
-for (int j = 1; j <= K; j++)
-    for (int i = 0; i + (1 << j) <= N; i++)
-        st[i][j] = f(st[i][j-1], st[i + (1 << (j - 1))][j - 1]);
+for (int i = 1; i <= K; i++)
+    for (int j = 0; j + (1 << i) <= N; j++)
+        st[i][j] = f(st[i - 1][j], st[i - 1][j + (1 << (i - 1))]);
 ```
 
 The function $f$ will depend on the type of query.
@@ -62,25 +63,24 @@ Therefore the natural definition of the function $f$ is $f(x, y) = x + y$.
 We can construct the data structure with:
 
 ```{.cpp file=sparsetable_sum_generation}
-long long st[MAXN][K + 1];
+long long st[K + 1][MAXN];
 
-for (int i = 0; i < N; i++)
-    st[i][0] = array[i];
+std::copy(array.begin(), array.end(), st[0]);
 
-for (int j = 1; j <= K; j++)
-    for (int i = 0; i + (1 << j) <= N; i++)
-        st[i][j] = st[i][j-1] + st[i + (1 << (j - 1))][j - 1];
+for (int i = 1; i <= K; i++)
+    for (int j = 0; j + (1 << i) <= N; j++)
+        st[i][j] = st[i - 1][j] + st[i - 1][j + (1 << (i - 1))];
 ```
 
 To answer the sum query for the range $[L, R]$, we iterate over all powers of two, starting from the biggest one.
-As soon as a power of two $2^j$ is smaller or equal to the length of the range ($= R - L + 1$), we process the first the first part of range $[L, L + 2^j - 1]$, and continue with the remaining range $[L + 2^j, R]$.
+As soon as a power of two $2^i$ is smaller or equal to the length of the range ($= R - L + 1$), we process the first part of range $[L, L + 2^i - 1]$, and continue with the remaining range $[L + 2^i, R]$.
 
 ```{.cpp file=sparsetable_sum_query}
 long long sum = 0;
-for (int j = K; j >= 0; j--) {
-    if ((1 << j) <= R - L + 1) {
-        sum += st[L][j];
-        L += 1 << j;
+for (int i = K; i >= 0; i--) {
+    if ((1 << i) <= R - L + 1) {
+        sum += st[i][L];
+        L += 1 << i;
     }
 }
 ```
@@ -96,7 +96,7 @@ E.g. we can split the range $[1, 6]$ into the ranges $[1, 4]$ and $[3, 6]$.
 The range minimum of $[1, 6]$ is clearly the same as the minimum of the range minimum of $[1, 4]$ and the range minimum of $[3, 6]$.
 So we can compute the minimum of the range $[L, R]$ with:
 
-$$\min(\text{st}[L][j], \text{st}[R - 2^j + 1][j]) \quad \text{ where } j = \log_2(R - L + 1)$$
+$$\min(\text{st}[i][L], \text{st}[i][R - 2^i + 1]) \quad \text{ where } i = \log_2(R - L + 1)$$
 
 This requires that we are able to compute $\log_2(R - L + 1)$ fast.
 You can accomplish that by precomputing all logarithms:
@@ -107,25 +107,38 @@ lg[1] = 0;
 for (int i = 2; i <= MAXN; i++)
     lg[i] = lg[i/2] + 1;
 ```
+Alternatively, log can be computed on the fly in constant space and time:
+```c++
+// C++20
+#include <bit>
+int log2_floor(unsigned long i) {
+    return std::bit_width(i) - 1;
+}
+
+// pre C++20
+int log2_floor(unsigned long long i) {
+    return i ? __builtin_clzll(1) - __builtin_clzll(i) : -1;
+}
+```
+[This benchmark](https://quick-bench.com/q/Zghbdj_TEkmw4XG2nqOpD3tsJ8U) shows that using `lg` array is slower because of cache misses.
 
 Afterwards we need to precompute the Sparse Table structure. This time we define $f$ with $f(x, y) = \min(x, y)$.
 
 ```{.cpp file=sparse_table_minimum_generation}
-int st[MAXN][K + 1];
+int st[K + 1][MAXN];
 
-for (int i = 0; i < N; i++)
-    st[i][0] = array[i];
+std::copy(array.begin(), array.end(), st[0]);
 
-for (int j = 1; j <= K; j++)
-    for (int i = 0; i + (1 << j) <= N; i++)
-        st[i][j] = min(st[i][j-1], st[i + (1 << (j - 1))][j - 1]);
+for (int i = 1; i <= K; i++)
+    for (int j = 0; j + (1 << i) <= N; j++)
+        st[i][j] = min(st[i - 1][j], st[i - 1][j + (1 << (i - 1))]);
 ```
 
 And the minimum of a range $[L, R]$ can be computed with:
 
 ```{.cpp file=sparse_table_minimum_query}
-int j = lg[R - L + 1];
-int minimum = min(st[L][j], st[R - (1 << j) + 1][j]);
+int i = lg[R - L + 1];
+int minimum = min(st[i][L], st[i][R - (1 << i) + 1]);
 ```
 
 Time complexity for a Range Minimum Query is $O(1)$.
